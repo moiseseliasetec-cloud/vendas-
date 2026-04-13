@@ -18,7 +18,8 @@ import {
   doc,
   updateDoc,
   runTransaction,
-  deleteDoc
+  deleteDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* =========================
@@ -29,8 +30,8 @@ const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_PROJETO.firebaseapp.com",
   projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
+  storageBucket: "SEU_STORAGE_BUCKET",
+  messagingSenderId: "SEU_MESSAGING_SENDER_ID",
   appId: "SEU_APP_ID"
 };
 
@@ -40,53 +41,10 @@ const db = getFirestore(app);
 
 /* =========================
    CONFIG DO ADMIN
+   CRIE ESSA CONTA MANUALMENTE
+   NO FIREBASE AUTH
 ========================= */
-const ADMIN_EMAIL = "SEU_EMAIL_ADMIN_AQUI";
-const ADMIN_NAME = "Moises Elias";
-
-/* =========================
-   ELEMENTOS
-========================= */
-const authSection = document.getElementById("authSection");
-const storeSection = document.getElementById("storeSection");
-const ordersSection = document.getElementById("ordersSection");
-const adminSection = document.getElementById("adminSection");
-const topbar = document.getElementById("topbar");
-
-const welcomeText = document.getElementById("welcomeText");
-const productsGrid = document.getElementById("productsGrid");
-const myOrdersList = document.getElementById("myOrdersList");
-const adminOrdersList = document.getElementById("adminOrdersList");
-const adminProductsList = document.getElementById("adminProductsList");
-
-const cartDrawer = document.getElementById("cartDrawer");
-const overlay = document.getElementById("overlay");
-const cartItems = document.getElementById("cartItems");
-const cartCount = document.getElementById("cartCount");
-const cartTotal = document.getElementById("cartTotal");
-const toastContainer = document.getElementById("toastContainer");
-
-const btnCart = document.getElementById("btnCart");
-const btnCloseCart = document.getElementById("btnCloseCart");
-const btnCheckout = document.getElementById("btnCheckout");
-const btnLogout = document.getElementById("btnLogout");
-const btnOpenOrders = document.getElementById("btnOpenOrders");
-const btnSeedProducts = document.getElementById("btnSeedProducts");
-
-const registerForm = document.getElementById("registerForm");
-const loginForm = document.getElementById("loginForm");
-const productForm = document.getElementById("productForm");
-
-/* =========================
-   ESTADO
-========================= */
-let currentUser = null;
-let productsCache = [];
-let cart = [];
-let myOrdersUnsub = null;
-let allOrdersUnsub = null;
-let productsUnsub = null;
-let orderStatusMemory = {};
+const ADMIN_EMAIL = "admin@marketstudy.com";
 
 /* =========================
    PRODUTOS INICIAIS
@@ -166,13 +124,69 @@ const defaultProducts = [
   },
   {
     name: "Marca-texto",
-    description: "Marca-texto. Depois você pode trocar a foto e o nome da cor.",
+    description: "Marca-texto. Depois você pode trocar a foto, a cor e adicionar mais imagens.",
     price: 6.5,
     stock: 15,
     needsSubject: false,
     images: ["img/marca-texto-amarelo-1.jpg"]
   }
 ];
+
+/* =========================
+   ELEMENTOS
+========================= */
+const splashScreen = document.getElementById("splashScreen");
+
+const authSection = document.getElementById("authSection");
+const storeSection = document.getElementById("storeSection");
+const ordersSection = document.getElementById("ordersSection");
+const adminSection = document.getElementById("adminSection");
+const topbar = document.getElementById("topbar");
+
+const authTitle = document.getElementById("authTitle");
+const authSubtitle = document.getElementById("authSubtitle");
+
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+
+const showRegisterBtn = document.getElementById("showRegisterBtn");
+const showLoginBtn = document.getElementById("showLoginBtn");
+
+const welcomeText = document.getElementById("welcomeText");
+const btnOpenOrders = document.getElementById("btnOpenOrders");
+const btnCart = document.getElementById("btnCart");
+const btnCloseCart = document.getElementById("btnCloseCart");
+const btnCheckout = document.getElementById("btnCheckout");
+const btnLogout = document.getElementById("btnLogout");
+const btnSeedProducts = document.getElementById("btnSeedProducts");
+
+const productsGrid = document.getElementById("productsGrid");
+const myOrdersList = document.getElementById("myOrdersList");
+const adminOrdersList = document.getElementById("adminOrdersList");
+const adminProductsList = document.getElementById("adminProductsList");
+
+const cartDrawer = document.getElementById("cartDrawer");
+const overlay = document.getElementById("overlay");
+const cartItems = document.getElementById("cartItems");
+const cartCount = document.getElementById("cartCount");
+const cartTotal = document.getElementById("cartTotal");
+const toastContainer = document.getElementById("toastContainer");
+
+const productForm = document.getElementById("productForm");
+
+/* =========================
+   ESTADO
+========================= */
+let currentUser = null;
+let productsCache = [];
+let cart = [];
+let splashFinished = false;
+
+let myOrdersUnsub = null;
+let allOrdersUnsub = null;
+let productsUnsub = null;
+
+let orderStatusMemory = {};
 
 /* =========================
    HELPERS
@@ -188,18 +202,26 @@ function money(value) {
   });
 }
 
-function formatDate(value) {
-  if (!value) return "-";
-  const date = value.toDate ? value.toDate() : new Date(value);
-  return date.toLocaleString("pt-BR");
-}
-
 function stockText(stock) {
   return stock === -1 ? "♾️ sem limite" : `${stock} em estoque`;
 }
 
-function statusClass(status) {
-  return `status status-${status}`;
+function getProductImage(product) {
+  return product.images?.[0] || "https://via.placeholder.com/500x350?text=Produto";
+}
+
+function totalCartItems() {
+  return cart.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+function cartTotalValue() {
+  return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+
+function formatDate(dateValue) {
+  if (!dateValue) return "-";
+  const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
+  return date.toLocaleString("pt-BR");
 }
 
 function statusLabel(status) {
@@ -212,15 +234,19 @@ function statusLabel(status) {
   return map[status] || status;
 }
 
+function statusClass(status) {
+  return `status status-${status}`;
+}
+
 function showToast(message, type = "success") {
-  const el = document.createElement("div");
-  el.className = `toast ${type}`;
-  el.textContent = message;
-  toastContainer.appendChild(el);
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
 
   setTimeout(() => {
-    el.remove();
-  }, 3000);
+    toast.remove();
+  }, 3200);
 }
 
 function openCart() {
@@ -233,27 +259,106 @@ function closeCart() {
   overlay.classList.add("hidden");
 }
 
-function getProductImage(product) {
-  return product.images?.[0] || "https://via.placeholder.com/500x350?text=Produto";
+function cleanupListeners() {
+  if (myOrdersUnsub) {
+    myOrdersUnsub();
+    myOrdersUnsub = null;
+  }
+
+  if (allOrdersUnsub) {
+    allOrdersUnsub();
+    allOrdersUnsub = null;
+  }
+
+  if (productsUnsub) {
+    productsUnsub();
+    productsUnsub = null;
+  }
 }
 
-function cartTotalValue() {
-  return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-}
+function authErrorMessage(error) {
+  const code = error?.code || "";
 
-function totalCartItems() {
-  return cart.reduce((sum, item) => sum + item.quantity, 0);
+  const map = {
+    "auth/email-already-in-use": "Esse e-mail já está em uso.",
+    "auth/invalid-email": "E-mail inválido.",
+    "auth/weak-password": "A senha deve ter pelo menos 6 caracteres.",
+    "auth/invalid-credential": "E-mail ou senha inválidos.",
+    "auth/user-not-found": "Usuário não encontrado.",
+    "auth/wrong-password": "Senha incorreta.",
+    "auth/too-many-requests": "Muitas tentativas. Tente de novo mais tarde."
+  };
+
+  return map[code] || error?.message || "Ocorreu um erro.";
 }
 
 /* =========================
-   RENDER PRODUTOS
+   AUTH UI
+========================= */
+function showLoginForm() {
+  loginForm.classList.remove("hidden");
+  registerForm.classList.add("hidden");
+  authTitle.textContent = "Entrar";
+  authSubtitle.textContent = "Acesse sua conta para continuar";
+}
+
+function showRegisterForm() {
+  registerForm.classList.remove("hidden");
+  loginForm.classList.add("hidden");
+  authTitle.textContent = "Criar conta";
+  authSubtitle.textContent = "Cadastre-se para começar a comprar";
+}
+
+/* =========================
+   RENDER PRINCIPAL
+========================= */
+function renderAuthState() {
+  authSection.classList.add("hidden");
+  storeSection.classList.add("hidden");
+  ordersSection.classList.add("hidden");
+  adminSection.classList.add("hidden");
+  topbar.classList.add("hidden");
+
+  if (!splashFinished) return;
+
+  if (currentUser) {
+    topbar.classList.remove("hidden");
+    welcomeText.textContent = `Olá, ${currentUser.displayName || "Cliente"}`;
+
+    if (isAdmin()) {
+      btnCart.classList.add("hidden");
+      btnOpenOrders.classList.add("hidden");
+      adminSection.classList.remove("hidden");
+
+      listenProducts();
+      listenAllOrders();
+    } else {
+      btnCart.classList.remove("hidden");
+      btnOpenOrders.classList.remove("hidden");
+
+      storeSection.classList.remove("hidden");
+      ordersSection.classList.remove("hidden");
+
+      listenProducts();
+      listenMyOrders();
+      renderCart();
+    }
+  } else {
+    cart = [];
+    renderCart();
+    authSection.classList.remove("hidden");
+    showLoginForm();
+  }
+}
+
+/* =========================
+   PRODUTOS
 ========================= */
 function renderProducts() {
   if (!productsCache.length) {
     productsGrid.innerHTML = `
       <div class="empty-box">
-        Ainda não existem produtos cadastrados.<br>
-        Se você estiver no admin, clique em <strong>Criar produtos iniciais</strong>.
+        Ainda não existem produtos cadastrados.
       </div>
     `;
     return;
@@ -262,7 +367,7 @@ function renderProducts() {
   productsGrid.innerHTML = productsCache
     .map((p) => {
       const thumbs = (p.images || [])
-        .slice(0, 4)
+        .slice(0, 5)
         .map((img) => `<img src="${img}" alt="${p.name}">`)
         .join("");
 
@@ -303,8 +408,153 @@ function renderProducts() {
   });
 }
 
+function renderAdminProducts() {
+  if (!adminProductsList) return;
+
+  if (!productsCache.length) {
+    adminProductsList.innerHTML = `
+      <div class="empty-box">Nenhum produto cadastrado.</div>
+    `;
+    return;
+  }
+
+  adminProductsList.innerHTML = productsCache
+    .map((p) => `
+      <div class="admin-product-card">
+        <h3>${p.name}</h3>
+        <div class="item-line"><strong>Preço:</strong> ${money(p.price)}</div>
+        <div class="item-line"><strong>Estoque:</strong> ${stockText(p.stock)}</div>
+        <div class="item-line muted">${p.description || ""}</div>
+
+        <div class="stock-actions">
+          ${
+            p.stock !== -1
+              ? `
+                <button class="btn btn-light" data-stock-minus="${p.id}">-1 estoque</button>
+                <button class="btn btn-secondary" data-stock-plus="${p.id}">+1 estoque</button>
+              `
+              : ""
+          }
+          <button class="btn btn-dark" data-delete-product="${p.id}">Excluir</button>
+        </div>
+      </div>
+    `)
+    .join("");
+
+  document.querySelectorAll("[data-stock-plus]").forEach((btn) => {
+    btn.addEventListener("click", () => changeStock(btn.dataset.stockPlus, 1));
+  });
+
+  document.querySelectorAll("[data-stock-minus]").forEach((btn) => {
+    btn.addEventListener("click", () => changeStock(btn.dataset.stockMinus, -1));
+  });
+
+  document.querySelectorAll("[data-delete-product]").forEach((btn) => {
+    btn.addEventListener("click", () => removeProduct(btn.dataset.deleteProduct));
+  });
+}
+
+function listenProducts() {
+  if (productsUnsub) productsUnsub();
+
+  productsUnsub = onSnapshot(collection(db, "products"), (snapshot) => {
+    productsCache = snapshot.docs
+      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+    renderProducts();
+    renderAdminProducts();
+  });
+}
+
+async function seedInitialProducts() {
+  if (!isAdmin()) return;
+
+  try {
+    const snap = await getDocs(collection(db, "products"));
+
+    if (!snap.empty) {
+      showToast("Já existem produtos cadastrados.", "warning");
+      return;
+    }
+
+    for (const product of defaultProducts) {
+      await addDoc(collection(db, "products"), product);
+    }
+
+    showToast("Produtos iniciais criados com sucesso.");
+  } catch (error) {
+    showToast("Erro ao criar produtos iniciais.", "error");
+  }
+}
+
+async function addProduct(event) {
+  event.preventDefault();
+  if (!isAdmin()) return;
+
+  const name = document.getElementById("prodName").value.trim();
+  const price = Number(document.getElementById("prodPrice").value);
+  const stock = Number(document.getElementById("prodStock").value);
+  const description = document.getElementById("prodDescription").value.trim();
+  const images = document
+    .getElementById("prodImages")
+    .value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const needsSubject = document.getElementById("prodNeedsSubject").checked;
+
+  if (!name || !images.length || Number.isNaN(price) || Number.isNaN(stock)) {
+    showToast("Preencha os campos corretamente.", "warning");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "products"), {
+      name,
+      price,
+      stock,
+      description,
+      images,
+      needsSubject
+    });
+
+    productForm.reset();
+    showToast("Produto salvo com sucesso.");
+  } catch (error) {
+    showToast("Erro ao salvar produto.", "error");
+  }
+}
+
+async function changeStock(productId, delta) {
+  try {
+    const product = productsCache.find((p) => p.id === productId);
+    if (!product || product.stock === -1) return;
+
+    const newStock = Math.max(0, Number(product.stock) + delta);
+    await updateDoc(doc(db, "products", productId), { stock: newStock });
+    showToast("Estoque atualizado.");
+  } catch (error) {
+    showToast("Erro ao atualizar estoque.", "error");
+  }
+}
+
+async function removeProduct(productId) {
+  if (!isAdmin()) return;
+
+  const ok = confirm("Tem certeza que deseja excluir esse produto?");
+  if (!ok) return;
+
+  try {
+    await deleteDoc(doc(db, "products", productId));
+    showToast("Produto excluído.");
+  } catch (error) {
+    showToast("Erro ao excluir produto.", "error");
+  }
+}
+
 /* =========================
-   RENDER CARRINHO
+   CARRINHO
 ========================= */
 function renderCart() {
   cartCount.textContent = totalCartItems();
@@ -336,6 +586,7 @@ function renderCart() {
             <div class="item-line"><strong>${money(item.price * item.quantity)}</strong></div>
           </div>
         </div>
+
         <div class="order-actions">
           <button class="btn btn-light" data-remove="${index}">Remover</button>
         </div>
@@ -348,14 +599,11 @@ function renderCart() {
     btn.addEventListener("click", () => {
       cart.splice(Number(btn.dataset.remove), 1);
       renderCart();
-      showToast("Item removido do carrinho", "info");
+      showToast("Item removido do carrinho.", "info");
     });
   });
 }
 
-/* =========================
-   ADICIONAR AO CARRINHO
-========================= */
 function addToCart(productId) {
   const product = productsCache.find((p) => p.id === productId);
   if (!product) return;
@@ -400,12 +648,9 @@ function addToCart(productId) {
   }
 
   renderCart();
-  showToast("Produto adicionado ao carrinho");
+  showToast("Produto adicionado ao carrinho.");
 }
 
-/* =========================
-   FINALIZAR PEDIDO
-========================= */
 async function checkoutCart() {
   if (!currentUser) {
     showToast("Faça login primeiro.", "warning");
@@ -426,6 +671,9 @@ async function checkoutCart() {
       subject: item.subject || "",
       image: item.image
     }));
+
+    const now = new Date();
+    const orderId = doc(collection(db, "orders"));
 
     await runTransaction(db, async (transaction) => {
       for (const item of cart) {
@@ -451,17 +699,17 @@ async function checkoutCart() {
         }
       }
 
-      const orderRef = doc(collection(db, "orders"));
-
-      transaction.set(orderRef, {
+      transaction.set(orderId, {
         userId: currentUser.uid,
         customerName: currentUser.displayName || "Cliente",
         customerEmail: currentUser.email,
         items: orderItems,
         total: cartTotalValue(),
         status: "pendente",
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: now,
+        createdAtMs: Date.now(),
+        updatedAt: now,
+        updatedAtMs: Date.now()
       });
     });
 
@@ -515,20 +763,15 @@ function renderMyOrders(orders) {
 }
 
 function listenMyOrders() {
-  if (myOrdersUnsub) myOrdersUnsub();
-
   if (!currentUser || isAdmin()) return;
+  if (myOrdersUnsub) myOrdersUnsub();
 
   const q = query(collection(db, "orders"), where("userId", "==", currentUser.uid));
 
   myOrdersUnsub = onSnapshot(q, (snapshot) => {
     const orders = snapshot.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => {
-        const aTime = a.createdAt?.seconds || 0;
-        const bTime = b.createdAt?.seconds || 0;
-        return bTime - aTime;
-      });
+      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 
     orders.forEach((order) => {
       if (orderStatusMemory[order.id] && orderStatusMemory[order.id] !== order.status) {
@@ -600,18 +843,13 @@ function renderAdminOrders(orders) {
 }
 
 function listenAllOrders() {
-  if (allOrdersUnsub) allOrdersUnsub();
-
   if (!currentUser || !isAdmin()) return;
+  if (allOrdersUnsub) allOrdersUnsub();
 
   allOrdersUnsub = onSnapshot(collection(db, "orders"), (snapshot) => {
     const orders = snapshot.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => {
-        const aTime = a.createdAt?.seconds || 0;
-        const bTime = b.createdAt?.seconds || 0;
-        return bTime - aTime;
-      });
+      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 
     renderAdminOrders(orders);
   });
@@ -621,70 +859,92 @@ async function updateOrderStatus(orderId, newStatus) {
   try {
     await updateDoc(doc(db, "orders", orderId), {
       status: newStatus,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      updatedAtMs: Date.now()
     });
-    showToast(`Pedido atualizado para ${statusLabel(newStatus)}`);
+    showToast(`Pedido atualizado para ${statusLabel(newStatus)}.`);
   } catch (error) {
     showToast("Erro ao atualizar pedido.", "error");
   }
 }
 
 /* =========================
-   PRODUTOS ADMIN
+   EVENTOS
 ========================= */
-function renderAdminProducts() {
-  if (!productsCache.length) {
-    adminProductsList.innerHTML = `
-      <div class="empty-box">
-        Nenhum produto cadastrado.
-      </div>
-    `;
+showRegisterBtn.addEventListener("click", showRegisterForm);
+showLoginBtn.addEventListener("click", showLoginForm);
+
+btnCart.addEventListener("click", openCart);
+btnCloseCart.addEventListener("click", closeCart);
+overlay.addEventListener("click", closeCart);
+btnCheckout.addEventListener("click", checkoutCart);
+
+btnOpenOrders.addEventListener("click", () => {
+  ordersSection.scrollIntoView({ behavior: "smooth" });
+});
+
+btnLogout.addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+    showToast("Você saiu da conta.", "info");
+  } catch (error) {
+    showToast("Erro ao sair.", "error");
+  }
+});
+
+btnSeedProducts.addEventListener("click", seedInitialProducts);
+productForm.addEventListener("submit", addProduct);
+
+registerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const name = document.getElementById("registerName").value.trim();
+  const email = document.getElementById("registerEmail").value.trim();
+  const password = document.getElementById("registerPassword").value.trim();
+
+  if (!name || !email || !password) {
+    showToast("Preencha todos os campos.", "warning");
     return;
   }
 
-  adminProductsList.innerHTML = productsCache
-    .map((p) => `
-      <div class="admin-product-card">
-        <h3>${p.name}</h3>
-        <div class="item-line"><strong>Preço:</strong> ${money(p.price)}</div>
-        <div class="item-line"><strong>Estoque:</strong> ${stockText(p.stock)}</div>
-        <div class="item-line muted">${p.description || ""}</div>
-
-        <div class="stock-actions">
-          ${
-            p.stock !== -1
-              ? `
-                <button class="btn btn-light" data-stock-minus="${p.id}">-1 estoque</button>
-                <button class="btn btn-secondary" data-stock-plus="${p.id}">+1 estoque</button>
-              `
-              : ""
-          }
-          <button class="btn btn-dark" data-delete-product="${p.id}">Excluir</button>
-        </div>
-      </div>
-    `)
-    .join("");
-
-  document.querySelectorAll("[data-stock-plus]").forEach((btn) => {
-    btn.addEventListener("click", () => changeStock(btn.dataset.stockPlus, 1));
-  });
-
-  document.querySelectorAll("[data-stock-minus]").forEach((btn) => {
-    btn.addEventListener("click", () => changeStock(btn.dataset.stockMinus, -1));
-  });
-
-  document.querySelectorAll("[data-delete-product]").forEach((btn) => {
-    btn.addEventListener("click", () => removeProduct(btn.dataset.deleteProduct));
-  });
-}
-
-async function changeStock(productId, delta) {
   try {
-    const product = productsCache.find((p) => p.id === productId);
-    if (!product || product.stock === -1) return;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-    const newStock = Math.max(0, Number(product.stock) + delta);
-    await updateDoc(doc(db, "products", productId), { stock: newStock });
-    showToast("Estoque atualizado");
+    await updateProfile(userCredential.user, {
+      displayName: name
+    });
+
+    await setDoc(doc(db, "users", userCredential.user.uid), {
+      name,
+      email,
+      createdAt: new Date()
+    });
+
+    currentUser = userCredential.user;
+    currentUser.displayName = name;
+
+    showToast("Conta criada com sucesso!");
   } catch (error) {
-    showToast("Erro ao atualizar estoque
+    showToast(authErrorMessage(error), "error");
+  }
+});
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    showToast("Login realizado com sucesso!");
+  } catch (error) {
+    showToast(authErrorMessage(error), "error");
+  }
+});
+
+/* =========================
+   AUTH OBSERVER
+========================= */
+onAuthStateChanged(auth, (user) => {
+  cleanupListeners();
