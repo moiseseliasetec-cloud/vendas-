@@ -3,15 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Loja do Moisés</title>
+  <title>Market Study</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- TELA DE ABERTURA -->
+  <section id="splashScreen" class="splash-screen">
+    <div class="splash-box">
+      <div class="splash-logo">📚</div>
+      <h1>Bem-vindo ao site<br>Market Study</h1>
+      <p>Seu espaço para mapas mentais, cópias e papelaria</p>
+    </div>
+  </section>
+
+  <!-- TOPO -->
   <header id="topbar" class="topbar hidden">
     <div class="brand">
       <span class="brand-badge">🛍️</span>
       <div>
-        <h1>Loja do Moisés</h1>
+        <h1>Market Study</h1>
         <small>Mapas mentais, cópias e papelaria</small>
       </div>
     </div>
@@ -27,25 +38,41 @@
   </header>
 
   <main class="container">
-    <!-- AUTH -->
-    <section id="authSection" class="auth-section">
-      <div class="auth-card">
-        <h2>Entrar</h2>
-        <form id="loginForm">
+
+    <!-- LOGIN / CADASTRO -->
+    <section id="authSection" class="auth-wrapper hidden">
+      <div class="auth-card single-auth-card">
+
+        <div class="auth-header">
+          <h2 id="authTitle">Entrar</h2>
+          <p id="authSubtitle">Acesse sua conta para continuar</p>
+        </div>
+
+        <!-- LOGIN -->
+        <form id="loginForm" class="auth-form">
           <input type="email" id="loginEmail" placeholder="Seu e-mail" required />
           <input type="password" id="loginPassword" placeholder="Sua senha" required />
           <button type="submit" class="btn btn-primary full">Entrar</button>
-        </form>
-      </div>
 
-      <div class="auth-card">
-        <h2>Criar conta</h2>
-        <form id="registerForm">
+          <div class="auth-switch">
+            <span>Ainda não tem conta?</span>
+            <button type="button" id="showRegisterBtn" class="link-btn">Criar conta</button>
+          </div>
+        </form>
+
+        <!-- CADASTRO -->
+        <form id="registerForm" class="auth-form hidden">
           <input type="text" id="registerName" placeholder="Seu nome" required />
           <input type="email" id="registerEmail" placeholder="Seu e-mail" required />
           <input type="password" id="registerPassword" placeholder="Crie uma senha" required />
-          <button type="submit" class="btn btn-secondary full">Cadastrar</button>
+          <button type="submit" class="btn btn-secondary full">Criar conta</button>
+
+          <div class="auth-switch">
+            <span>Já tem conta?</span>
+            <button type="button" id="showLoginBtn" class="link-btn">Entrar</button>
+          </div>
         </form>
+
       </div>
     </section>
 
@@ -65,7 +92,7 @@
       <div id="productsGrid" class="products-grid"></div>
     </section>
 
-    <!-- MEUS PEDIDOS -->
+    <!-- PEDIDOS DO CLIENTE -->
     <section id="ordersSection" class="panel hidden">
       <div class="panel-header">
         <h2>📦 Meus pedidos</h2>
@@ -88,7 +115,6 @@
             <input type="text" id="prodName" placeholder="Nome do produto" required />
             <input type="number" id="prodPrice" placeholder="Preço" step="0.01" required />
             <input type="number" id="prodStock" placeholder="Estoque (-1 para infinito)" required />
-
             <textarea id="prodDescription" placeholder="Descrição"></textarea>
 
             <input
@@ -120,6 +146,7 @@
         </div>
       </div>
     </section>
+
   </main>
 
   <!-- CARRINHO -->
