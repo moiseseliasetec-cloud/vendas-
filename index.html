@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loja do Moisés</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="topbar" class="topbar hidden">
+    <div class="brand">
+      <span class="brand-badge">🛍️</span>
+      <div>
+        <h1>Loja do Moisés</h1>
+        <small>Mapas mentais, cópias e papelaria</small>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <span id="welcomeText" class="welcome-text"></span>
+      <button id="btnOpenOrders" class="btn btn-light">Meus pedidos</button>
+      <button id="btnCart" class="btn btn-cart">
+        Carrinho <span id="cartCount">0</span>
+      </button>
+      <button id="btnLogout" class="btn btn-dark">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- AUTH -->
+    <section id="authSection" class="auth-section">
+      <div class="auth-card">
+        <h2>Entrar</h2>
+        <form id="loginForm">
+          <input type="email" id="loginEmail" placeholder="Seu e-mail" required />
+          <input type="password" id="loginPassword" placeholder="Sua senha" required />
+          <button type="submit" class="btn btn-primary full">Entrar</button>
+        </form>
+      </div>
+
+      <div class="auth-card">
+        <h2>Criar conta</h2>
+        <form id="registerForm">
+          <input type="text" id="registerName" placeholder="Seu nome" required />
+          <input type="email" id="registerEmail" placeholder="Seu e-mail" required />
+          <input type="password" id="registerPassword" placeholder="Crie uma senha" required />
+          <button type="submit" class="btn btn-secondary full">Cadastrar</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- LOJA -->
+    <section id="storeSection" class="hidden">
+      <div class="hero">
+        <div>
+          <p class="hero-mini">✨ Feito com capricho</p>
+          <h2>Escolha seus produtos</h2>
+          <p>
+            Veja o estoque, adicione ao carrinho e envie seu pedido.
+            Produtos sem limite aparecem com o símbolo <strong>♾️</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div id="productsGrid" class="products-grid"></div>
+    </section>
+
+    <!-- MEUS PEDIDOS -->
+    <section id="ordersSection" class="panel hidden">
+      <div class="panel-header">
+        <h2>📦 Meus pedidos</h2>
+      </div>
+      <div id="myOrdersList" class="orders-list"></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="adminSection" class="hidden">
+      <div class="admin-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>👑 Painel do administrador</h2>
+            <button id="btnSeedProducts" class="btn btn-primary">Criar produtos iniciais</button>
+          </div>
+
+          <form id="productForm" class="product-form">
+            <h3>Adicionar novo produto</h3>
+
+            <input type="text" id="prodName" placeholder="Nome do produto" required />
+            <input type="number" id="prodPrice" placeholder="Preço" step="0.01" required />
+            <input type="number" id="prodStock" placeholder="Estoque (-1 para infinito)" required />
+
+            <textarea id="prodDescription" placeholder="Descrição"></textarea>
+
+            <input
+              type="text"
+              id="prodImages"
+              placeholder="Imagens separadas por vírgula. Ex: img/caneta-verde-1.jpg, img/caneta-verde-2.jpg"
+              required
+            />
+
+            <label class="checkbox-wrap">
+              <input type="checkbox" id="prodNeedsSubject" />
+              Esse produto precisa que o cliente escreva a matéria/tema
+            </label>
+
+            <button type="submit" class="btn btn-secondary full">Salvar produto</button>
+          </form>
+
+          <div class="panel-header small-top">
+            <h3>Produtos cadastrados</h3>
+          </div>
+          <div id="adminProductsList" class="admin-products-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>🧾 Pedidos recebidos</h2>
+          </div>
+          <div id="adminOrdersList" class="orders-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- CARRINHO -->
+  <aside id="cartDrawer" class="cart-drawer">
+    <div class="cart-header">
+      <h2>🛒 Seu carrinho</h2>
+      <button id="btnCloseCart" class="btn btn-light">Fechar</button>
+    </div>
+
+    <div id="cartItems" class="cart-items"></div>
+
+    <div class="cart-footer">
+      <p>Total: <strong id="cartTotal">R$ 0,00</strong></p>
+      <button id="btnCheckout" class="btn btn-primary full">Finalizar pedido</button>
+    </div>
+  </aside>
+
+  <div id="overlay" class="overlay hidden"></div>
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
