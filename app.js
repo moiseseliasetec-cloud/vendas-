@@ -24,7 +24,7 @@ import {
 
 /* =========================
    FIREBASE CONFIG
-   COLE A SUA CONFIG AQUI
+   QUANDO VOCÊ CONECTAR, COLE AQUI
 ========================= */
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
@@ -35,22 +35,36 @@ const firebaseConfig = {
   appId: "SEU_APP_ID"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
 /* =========================
-   CONFIG DO ADMIN
-   CRIE ESSA CONTA MANUALMENTE
-   NO FIREBASE AUTH
+   CONFIG ADMIN
 ========================= */
 const ADMIN_EMAIL = "admin@marketstudy.com";
+const ADMIN_DEMO_PASSWORD = "thomasshelby15";
+
+/* =========================
+   DETECTA SE O FIREBASE ESTÁ PRONTO
+========================= */
+const FIREBASE_READY = Object.values(firebaseConfig).every((value) => {
+  const text = String(value || "");
+  return text && !text.includes("SUA_") && !text.includes("SEU_");
+});
+
+let app = null;
+let auth = null;
+let db = null;
+
+if (FIREBASE_READY) {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
 
 /* =========================
    PRODUTOS INICIAIS
 ========================= */
 const defaultProducts = [
   {
+    id: "demo-1",
     name: "Mapa mental personalizado",
     description: "Mapa mental de qualquer matéria. Digite a matéria/tema ao adicionar.",
     price: 15,
@@ -59,6 +73,7 @@ const defaultProducts = [
     images: ["img/mapa-mental-1.jpg", "img/mapa-mental-2.jpg"]
   },
   {
+    id: "demo-2",
     name: "Cópia de matéria no caderno",
     description: "Cópia organizada no caderno. Digite a matéria no pedido.",
     price: 12,
@@ -67,6 +82,7 @@ const defaultProducts = [
     images: ["img/caderno-1.jpg", "img/caderno-2.jpg"]
   },
   {
+    id: "demo-3",
     name: "Caneta Verde",
     description: "Caneta verde para escrita e marcação.",
     price: 4.5,
@@ -75,6 +91,7 @@ const defaultProducts = [
     images: ["img/caneta-verde-1.jpg"]
   },
   {
+    id: "demo-4",
     name: "Caneta Rosa",
     description: "Caneta rosa com escrita suave.",
     price: 4.5,
@@ -83,6 +100,7 @@ const defaultProducts = [
     images: ["img/caneta-rosa-1.jpg"]
   },
   {
+    id: "demo-5",
     name: "Caneta Roxa",
     description: "Caneta roxa para anotações bonitas.",
     price: 4.5,
@@ -91,6 +109,7 @@ const defaultProducts = [
     images: ["img/caneta-roxa-1.jpg"]
   },
   {
+    id: "demo-6",
     name: "Caneta Azul",
     description: "Caneta azul clássica.",
     price: 4.5,
@@ -99,6 +118,7 @@ const defaultProducts = [
     images: ["img/caneta-azul-1.jpg"]
   },
   {
+    id: "demo-7",
     name: "Caneta Azul Clara",
     description: "Caneta azul clara para destaque leve.",
     price: 4.5,
@@ -107,6 +127,7 @@ const defaultProducts = [
     images: ["img/caneta-azul-clara-1.jpg"]
   },
   {
+    id: "demo-8",
     name: "Caneta Vermelha",
     description: "Caneta vermelha para correções.",
     price: 4.5,
@@ -115,6 +136,7 @@ const defaultProducts = [
     images: ["img/caneta-vermelha-1.jpg"]
   },
   {
+    id: "demo-9",
     name: "Caneta Preta",
     description: "Caneta preta para uso geral.",
     price: 4.5,
@@ -123,6 +145,7 @@ const defaultProducts = [
     images: ["img/caneta-preta-1.jpg"]
   },
   {
+    id: "demo-10",
     name: "Marca-texto",
     description: "Marca-texto. Depois você pode trocar a foto, a cor e adicionar mais imagens.",
     price: 6.5,
@@ -185,8 +208,85 @@ let splashFinished = false;
 let myOrdersUnsub = null;
 let allOrdersUnsub = null;
 let productsUnsub = null;
-
 let orderStatusMemory = {};
+
+/* =========================
+   LOCAL STORAGE - MODO DEMO
+========================= */
+const LS_USERS = "marketStudyUsers";
+const LS_PRODUCTS = "marketStudyProducts";
+const LS_ORDERS = "marketStudyOrders";
+const LS_CURRENT_USER = "marketStudyCurrentUser";
+
+function getLS(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setLS(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function generateId(prefix = "id") {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function ensureDemoData() {
+  const products = getLS(LS_PRODUCTS, null);
+  if (!products || !products.length) {
+    setLS(LS_PRODUCTS, defaultProducts);
+  }
+
+  const users = getLS(LS_USERS, null);
+  if (!users) {
+    setLS(LS_USERS, []);
+  }
+
+  const orders = getLS(LS_ORDERS, null);
+  if (!orders) {
+    setLS(LS_ORDERS, []);
+  }
+}
+
+function getDemoProducts() {
+  return getLS(LS_PRODUCTS, []);
+}
+
+function setDemoProducts(products) {
+  setLS(LS_PRODUCTS, products);
+}
+
+function getDemoUsers() {
+  return getLS(LS_USERS, []);
+}
+
+function setDemoUsers(users) {
+  setLS(LS_USERS, users);
+}
+
+function getDemoOrders() {
+  return getLS(LS_ORDERS, []);
+}
+
+function setDemoOrders(orders) {
+  setLS(LS_ORDERS, orders);
+}
+
+function saveDemoCurrentUser(user) {
+  if (user) {
+    setLS(LS_CURRENT_USER, user);
+  } else {
+    localStorage.removeItem(LS_CURRENT_USER);
+  }
+}
+
+function loadDemoCurrentUser() {
+  return getLS(LS_CURRENT_USER, null);
+}
 
 /* =========================
    HELPERS
@@ -220,8 +320,16 @@ function cartTotalValue() {
 
 function formatDate(dateValue) {
   if (!dateValue) return "-";
-  const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
-  return date.toLocaleString("pt-BR");
+
+  if (typeof dateValue === "string") {
+    return new Date(dateValue).toLocaleString("pt-BR");
+  }
+
+  if (dateValue.toDate) {
+    return dateValue.toDate().toLocaleString("pt-BR");
+  }
+
+  return new Date(dateValue).toLocaleString("pt-BR");
 }
 
 function statusLabel(status) {
@@ -246,7 +354,7 @@ function showToast(message, type = "success") {
 
   setTimeout(() => {
     toast.remove();
-  }, 3200);
+  }, 3000);
 }
 
 function openCart() {
@@ -293,7 +401,7 @@ function authErrorMessage(error) {
 }
 
 /* =========================
-   AUTH UI
+   UI AUTH
 ========================= */
 function showLoginForm() {
   loginForm.classList.remove("hidden");
@@ -310,7 +418,7 @@ function showRegisterForm() {
 }
 
 /* =========================
-   RENDER PRINCIPAL
+   RENDER GERAL
 ========================= */
 function renderAuthState() {
   authSection.classList.add("hidden");
@@ -329,16 +437,13 @@ function renderAuthState() {
       btnCart.classList.add("hidden");
       btnOpenOrders.classList.add("hidden");
       adminSection.classList.remove("hidden");
-
       listenProducts();
       listenAllOrders();
     } else {
       btnCart.classList.remove("hidden");
       btnOpenOrders.classList.remove("hidden");
-
       storeSection.classList.remove("hidden");
       ordersSection.classList.remove("hidden");
-
       listenProducts();
       listenMyOrders();
       renderCart();
@@ -455,37 +560,58 @@ function renderAdminProducts() {
 }
 
 function listenProducts() {
-  if (productsUnsub) productsUnsub();
+  if (FIREBASE_READY) {
+    if (productsUnsub) productsUnsub();
 
-  productsUnsub = onSnapshot(collection(db, "products"), (snapshot) => {
-    productsCache = snapshot.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    productsUnsub = onSnapshot(collection(db, "products"), (snapshot) => {
+      productsCache = snapshot.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
-    renderProducts();
-    renderAdminProducts();
-  });
+      renderProducts();
+      renderAdminProducts();
+    });
+    return;
+  }
+
+  productsCache = getDemoProducts().sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  renderProducts();
+  renderAdminProducts();
 }
 
 async function seedInitialProducts() {
   if (!isAdmin()) return;
 
-  try {
-    const snap = await getDocs(collection(db, "products"));
+  if (FIREBASE_READY) {
+    try {
+      const snap = await getDocs(collection(db, "products"));
 
-    if (!snap.empty) {
-      showToast("Já existem produtos cadastrados.", "warning");
-      return;
+      if (!snap.empty) {
+        showToast("Já existem produtos cadastrados.", "warning");
+        return;
+      }
+
+      for (const product of defaultProducts) {
+        const { id, ...data } = product;
+        await addDoc(collection(db, "products"), data);
+      }
+
+      showToast("Produtos iniciais criados com sucesso.");
+    } catch {
+      showToast("Erro ao criar produtos iniciais.", "error");
     }
-
-    for (const product of defaultProducts) {
-      await addDoc(collection(db, "products"), product);
-    }
-
-    showToast("Produtos iniciais criados com sucesso.");
-  } catch (error) {
-    showToast("Erro ao criar produtos iniciais.", "error");
+    return;
   }
+
+  const currentProducts = getDemoProducts();
+  if (currentProducts.length) {
+    showToast("Já existem produtos cadastrados.", "warning");
+    return;
+  }
+
+  setDemoProducts(defaultProducts);
+  listenProducts();
+  showToast("Produtos iniciais criados com sucesso.");
 }
 
 async function addProduct(event) {
@@ -509,34 +635,62 @@ async function addProduct(event) {
     return;
   }
 
-  try {
-    await addDoc(collection(db, "products"), {
-      name,
-      price,
-      stock,
-      description,
-      images,
-      needsSubject
-    });
+  const payload = {
+    name,
+    price,
+    stock,
+    description,
+    images,
+    needsSubject
+  };
 
-    productForm.reset();
-    showToast("Produto salvo com sucesso.");
-  } catch (error) {
-    showToast("Erro ao salvar produto.", "error");
+  if (FIREBASE_READY) {
+    try {
+      await addDoc(collection(db, "products"), payload);
+      productForm.reset();
+      showToast("Produto salvo com sucesso.");
+    } catch {
+      showToast("Erro ao salvar produto.", "error");
+    }
+    return;
   }
+
+  const products = getDemoProducts();
+  products.push({
+    id: generateId("prod"),
+    ...payload
+  });
+  setDemoProducts(products);
+  productForm.reset();
+  listenProducts();
+  showToast("Produto salvo com sucesso.");
 }
 
 async function changeStock(productId, delta) {
-  try {
-    const product = productsCache.find((p) => p.id === productId);
-    if (!product || product.stock === -1) return;
+  const product = productsCache.find((p) => p.id === productId);
+  if (!product || product.stock === -1) return;
 
-    const newStock = Math.max(0, Number(product.stock) + delta);
-    await updateDoc(doc(db, "products", productId), { stock: newStock });
-    showToast("Estoque atualizado.");
-  } catch (error) {
-    showToast("Erro ao atualizar estoque.", "error");
+  if (FIREBASE_READY) {
+    try {
+      const newStock = Math.max(0, Number(product.stock) + delta);
+      await updateDoc(doc(db, "products", productId), { stock: newStock });
+      showToast("Estoque atualizado.");
+    } catch {
+      showToast("Erro ao atualizar estoque.", "error");
+    }
+    return;
   }
+
+  const products = getDemoProducts().map((item) => {
+    if (item.id === productId) {
+      return { ...item, stock: Math.max(0, Number(item.stock) + delta) };
+    }
+    return item;
+  });
+
+  setDemoProducts(products);
+  listenProducts();
+  showToast("Estoque atualizado.");
 }
 
 async function removeProduct(productId) {
@@ -545,12 +699,20 @@ async function removeProduct(productId) {
   const ok = confirm("Tem certeza que deseja excluir esse produto?");
   if (!ok) return;
 
-  try {
-    await deleteDoc(doc(db, "products", productId));
-    showToast("Produto excluído.");
-  } catch (error) {
-    showToast("Erro ao excluir produto.", "error");
+  if (FIREBASE_READY) {
+    try {
+      await deleteDoc(doc(db, "products", productId));
+      showToast("Produto excluído.");
+    } catch {
+      showToast("Erro ao excluir produto.", "error");
+    }
+    return;
   }
+
+  const products = getDemoProducts().filter((item) => item.id !== productId);
+  setDemoProducts(products);
+  listenProducts();
+  showToast("Produto excluído.");
 }
 
 /* =========================
@@ -662,68 +824,126 @@ async function checkoutCart() {
     return;
   }
 
-  try {
-    const orderItems = cart.map((item) => ({
-      productId: item.productId,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      subject: item.subject || "",
-      image: item.image
-    }));
+  const orderItems = cart.map((item) => ({
+    productId: item.productId,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    subject: item.subject || "",
+    image: item.image
+  }));
 
-    const now = new Date();
-    const orderId = doc(collection(db, "orders"));
+  if (FIREBASE_READY) {
+    try {
+      const now = new Date();
+      const orderRef = doc(collection(db, "orders"));
 
-    await runTransaction(db, async (transaction) => {
-      for (const item of cart) {
-        const productRef = doc(db, "products", item.productId);
-        const productSnap = await transaction.get(productRef);
+      await runTransaction(db, async (transaction) => {
+        for (const item of cart) {
+          const productRef = doc(db, "products", item.productId);
+          const productSnap = await transaction.get(productRef);
 
-        if (!productSnap.exists()) {
-          throw new Error(`O produto ${item.name} não existe mais.`);
-        }
-
-        const productData = productSnap.data();
-
-        if (productData.stock !== -1) {
-          const currentStock = Number(productData.stock || 0);
-
-          if (currentStock < item.quantity) {
-            throw new Error(`Estoque insuficiente para ${item.name}.`);
+          if (!productSnap.exists()) {
+            throw new Error(`O produto ${item.name} não existe mais.`);
           }
 
-          transaction.update(productRef, {
-            stock: currentStock - item.quantity
-          });
+          const productData = productSnap.data();
+
+          if (productData.stock !== -1) {
+            const currentStock = Number(productData.stock || 0);
+
+            if (currentStock < item.quantity) {
+              throw new Error(`Estoque insuficiente para ${item.name}.`);
+            }
+
+            transaction.update(productRef, {
+              stock: currentStock - item.quantity
+            });
+          }
         }
-      }
 
-      transaction.set(orderId, {
-        userId: currentUser.uid,
-        customerName: currentUser.displayName || "Cliente",
-        customerEmail: currentUser.email,
-        items: orderItems,
-        total: cartTotalValue(),
-        status: "pendente",
-        createdAt: now,
-        createdAtMs: Date.now(),
-        updatedAt: now,
-        updatedAtMs: Date.now()
+        transaction.set(orderRef, {
+          userId: currentUser.uid,
+          customerName: currentUser.displayName || "Cliente",
+          customerEmail: currentUser.email,
+          items: orderItems,
+          total: cartTotalValue(),
+          status: "pendente",
+          createdAt: now,
+          createdAtMs: Date.now(),
+          updatedAt: now,
+          updatedAtMs: Date.now()
+        });
       });
-    });
 
-    cart = [];
-    renderCart();
-    closeCart();
-    showToast("Pedido enviado com sucesso!");
-  } catch (error) {
-    showToast(error.message || "Erro ao finalizar pedido.", "error");
+      cart = [];
+      renderCart();
+      closeCart();
+      showToast("Pedido enviado com sucesso!");
+    } catch (error) {
+      showToast(error.message || "Erro ao finalizar pedido.", "error");
+    }
+    return;
   }
+
+  const products = getDemoProducts();
+
+  for (const item of cart) {
+    const product = products.find((p) => p.id === item.productId);
+
+    if (!product) {
+      showToast(`O produto ${item.name} não existe mais.`, "error");
+      return;
+    }
+
+    if (product.stock !== -1 && product.stock < item.quantity) {
+      showToast(`Estoque insuficiente para ${item.name}.`, "error");
+      return;
+    }
+  }
+
+  const updatedProducts = products.map((product) => {
+    const cartItem = cart.find((item) => item.productId === product.id);
+
+    if (!cartItem) return product;
+    if (product.stock === -1) return product;
+
+    return {
+      ...product,
+      stock: product.stock - cartItem.quantity
+    };
+  });
+
+  const orders = getDemoOrders();
+  const nowIso = new Date().toISOString();
+
+  orders.push({
+    id: generateId("order"),
+    userId: currentUser.uid,
+    customerName: currentUser.displayName || "Cliente",
+    customerEmail: currentUser.email,
+    items: orderItems,
+    total: cartTotalValue(),
+    status: "pendente",
+    createdAt: nowIso,
+    createdAtMs: Date.now(),
+    updatedAt: nowIso,
+    updatedAtMs: Date.now()
+  });
+
+  setDemoProducts(updatedProducts);
+  setDemoOrders(orders);
+
+  cart = [];
+  renderCart();
+  closeCart();
+  listenProducts();
+  listenMyOrders();
+  showToast("Pedido enviado com sucesso!");
 }
 
 /* =========================
-   PEDIDOS DO CLIENTE
+   PEDIDOS CLIENTE
 ========================= */
 function renderMyOrders(orders) {
   if (!orders.length) {
@@ -764,28 +984,46 @@ function renderMyOrders(orders) {
 
 function listenMyOrders() {
   if (!currentUser || isAdmin()) return;
-  if (myOrdersUnsub) myOrdersUnsub();
 
-  const q = query(collection(db, "orders"), where("userId", "==", currentUser.uid));
+  if (FIREBASE_READY) {
+    if (myOrdersUnsub) myOrdersUnsub();
 
-  myOrdersUnsub = onSnapshot(q, (snapshot) => {
-    const orders = snapshot.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    const q = query(collection(db, "orders"), where("userId", "==", currentUser.uid));
 
-    orders.forEach((order) => {
-      if (orderStatusMemory[order.id] && orderStatusMemory[order.id] !== order.status) {
-        showToast(`Seu pedido foi atualizado para: ${statusLabel(order.status)}`, "info");
-      }
-      orderStatusMemory[order.id] = order.status;
+    myOrdersUnsub = onSnapshot(q, (snapshot) => {
+      const orders = snapshot.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+
+      orders.forEach((order) => {
+        if (orderStatusMemory[order.id] && orderStatusMemory[order.id] !== order.status) {
+          showToast(`Seu pedido foi atualizado para: ${statusLabel(order.status)}`, "info");
+        }
+        orderStatusMemory[order.id] = order.status;
+      });
+
+      renderMyOrders(orders);
     });
 
-    renderMyOrders(orders);
+    return;
+  }
+
+  const orders = getDemoOrders()
+    .filter((order) => order.userId === currentUser.uid)
+    .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+
+  orders.forEach((order) => {
+    if (orderStatusMemory[order.id] && orderStatusMemory[order.id] !== order.status) {
+      showToast(`Seu pedido foi atualizado para: ${statusLabel(order.status)}`, "info");
+    }
+    orderStatusMemory[order.id] = order.status;
   });
+
+  renderMyOrders(orders);
 }
 
 /* =========================
-   PEDIDOS DO ADMIN
+   PEDIDOS ADMIN
 ========================= */
 function renderAdminOrders(orders) {
   if (!orders.length) {
@@ -844,28 +1082,141 @@ function renderAdminOrders(orders) {
 
 function listenAllOrders() {
   if (!currentUser || !isAdmin()) return;
-  if (allOrdersUnsub) allOrdersUnsub();
 
-  allOrdersUnsub = onSnapshot(collection(db, "orders"), (snapshot) => {
-    const orders = snapshot.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+  if (FIREBASE_READY) {
+    if (allOrdersUnsub) allOrdersUnsub();
 
-    renderAdminOrders(orders);
-  });
+    allOrdersUnsub = onSnapshot(collection(db, "orders"), (snapshot) => {
+      const orders = snapshot.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+
+      renderAdminOrders(orders);
+    });
+
+    return;
+  }
+
+  const orders = getDemoOrders().sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+  renderAdminOrders(orders);
 }
 
 async function updateOrderStatus(orderId, newStatus) {
-  try {
-    await updateDoc(doc(db, "orders", orderId), {
-      status: newStatus,
-      updatedAt: new Date(),
-      updatedAtMs: Date.now()
-    });
-    showToast(`Pedido atualizado para ${statusLabel(newStatus)}.`);
-  } catch (error) {
-    showToast("Erro ao atualizar pedido.", "error");
+  if (FIREBASE_READY) {
+    try {
+      await updateDoc(doc(db, "orders", orderId), {
+        status: newStatus,
+        updatedAt: new Date(),
+        updatedAtMs: Date.now()
+      });
+      showToast(`Pedido atualizado para ${statusLabel(newStatus)}.`);
+    } catch {
+      showToast("Erro ao atualizar pedido.", "error");
+    }
+    return;
   }
+
+  const orders = getDemoOrders().map((order) => {
+    if (order.id === orderId) {
+      return {
+        ...order,
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+        updatedAtMs: Date.now()
+      };
+    }
+    return order;
+  });
+
+  setDemoOrders(orders);
+  listenAllOrders();
+  if (!isAdmin()) listenMyOrders();
+  showToast(`Pedido atualizado para ${statusLabel(newStatus)}.`);
+}
+
+/* =========================
+   LOGIN / CADASTRO
+========================= */
+async function registerWithFirebase(name, email, password) {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+  await updateProfile(userCredential.user, {
+    displayName: name
+  });
+
+  await setDoc(doc(db, "users", userCredential.user.uid), {
+    name,
+    email,
+    createdAt: new Date()
+  });
+
+  currentUser = {
+    uid: userCredential.user.uid,
+    displayName: name,
+    email: userCredential.user.email
+  };
+}
+
+function registerInDemo(name, email, password) {
+  const users = getDemoUsers();
+
+  const alreadyExists = users.find((user) => user.email === email);
+  if (alreadyExists) {
+    throw new Error("Esse e-mail já está em uso.");
+  }
+
+  const user = {
+    uid: generateId("user"),
+    name,
+    email,
+    password
+  };
+
+  users.push(user);
+  setDemoUsers(users);
+
+  currentUser = {
+    uid: user.uid,
+    displayName: user.name,
+    email: user.email
+  };
+
+  saveDemoCurrentUser(currentUser);
+}
+
+async function loginWithFirebase(email, password) {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+  currentUser = {
+    uid: userCredential.user.uid,
+    displayName: userCredential.user.displayName || "Cliente",
+    email: userCredential.user.email
+  };
+}
+
+function loginInDemo(email, password) {
+  const users = getDemoUsers();
+  let user = users.find((item) => item.email === email && item.password === password);
+
+  if (!user && email === ADMIN_EMAIL && password === ADMIN_DEMO_PASSWORD) {
+    user = {
+      uid: "admin-local",
+      name: "Moises Elias",
+      email: ADMIN_EMAIL
+    };
+  }
+
+  if (!user) {
+    throw new Error("E-mail ou senha inválidos.");
+  }
+
+  currentUser = {
+    uid: user.uid,
+    displayName: user.name || "Cliente",
+    email: user.email
+  };
+
+  saveDemoCurrentUser(currentUser);
 }
 
 /* =========================
@@ -884,12 +1235,21 @@ btnOpenOrders.addEventListener("click", () => {
 });
 
 btnLogout.addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-    showToast("Você saiu da conta.", "info");
-  } catch (error) {
-    showToast("Erro ao sair.", "error");
+  if (FIREBASE_READY) {
+    try {
+      await signOut(auth);
+      showToast("Você saiu da conta.", "info");
+    } catch {
+      showToast("Erro ao sair.", "error");
+    }
+    return;
   }
+
+  currentUser = null;
+  saveDemoCurrentUser(null);
+  cleanupListeners();
+  renderAuthState();
+  showToast("Você saiu da conta.", "info");
 });
 
 btnSeedProducts.addEventListener("click", seedInitialProducts);
@@ -908,21 +1268,14 @@ registerForm.addEventListener("submit", async (event) => {
   }
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    if (FIREBASE_READY) {
+      await registerWithFirebase(name, email, password);
+    } else {
+      registerInDemo(name, email, password);
+      showToast("Conta criada no modo local/demo.");
+    }
 
-    await updateProfile(userCredential.user, {
-      displayName: name
-    });
-
-    await setDoc(doc(db, "users", userCredential.user.uid), {
-      name,
-      email,
-      createdAt: new Date()
-    });
-
-    currentUser = userCredential.user;
-    currentUser.displayName = name;
-
+    renderAuthState();
     showToast("Conta criada com sucesso!");
   } catch (error) {
     showToast(authErrorMessage(error), "error");
@@ -932,19 +1285,4 @@ registerForm.addEventListener("submit", async (event) => {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value.trim();
-
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    showToast("Login realizado com sucesso!");
-  } catch (error) {
-    showToast(authErrorMessage(error), "error");
-  }
-});
-
-/* =========================
-   AUTH OBSERVER
-========================= */
-onAuthStateChanged(auth, (user) => {
-  cleanupListeners();
+  const email = document.getElementById("loginEmail").value
